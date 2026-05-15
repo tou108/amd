@@ -1,0 +1,22 @@
+# Android ビルド成果物
+*/build/
+*.apk
+*.aab
+*.aar
+*.class
+*.dex
+.gradle/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# NDK
+obj/
+libs/*.so
+
+# 一時ファイル
+*.tmp
+*.log
