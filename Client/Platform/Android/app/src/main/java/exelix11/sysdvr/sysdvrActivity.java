@@ -2,12 +2,12 @@ package exelix11.sysdvr;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
@@ -16,12 +16,17 @@ import androidx.core.content.ContextCompat;
 
 import org.libsdl.app.SDLActivity;
 
+/**
+ * SysDVR メインActivity
+ * 画面認識 & Arduino Leonardo 自動操作機能を統合
+ */
 public class sysdvrActivity extends SDLActivity
 {
     public static sysdvrActivity instance;
 
     private static final int PERM_REQUEST_BT = 200;
 
+    // 自動操作オーバーレイ (SDL画面の上にFloating UI)
     private AutomationOverlayView overlayView;
 
     @Override
@@ -31,34 +36,39 @@ public class sysdvrActivity extends SDLActivity
         instance = this;
         CheckPackageName();
         requestBluetoothPermissions();
-        // SDL完全初期化後にオーバーレイを追加するため2秒遅延
-        new Handler(Looper.getMainLooper()).postDelayed(this::initAutomationOverlay, 2000);
+        initAutomationOverlay();
         Log("SysDVRActivity created (with AutomationManager)");
     }
 
     @Override
     protected void onDestroy() {
+        // 自動操作を安全に停止
         AutomationManager mgr = AutomationManager.getInstance();
         if (mgr.isRunning()) mgr.stop();
         super.onDestroy();
     }
 
+    // ---- 自動操作オーバーレイ初期化 ----
+
     private void initAutomationOverlay() {
-        try {
-            FrameLayout rootView = (FrameLayout) getWindow().getDecorView();
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            );
-            overlayView = new AutomationOverlayView(this);
-            rootView.addView(overlayView, params);
-            overlayView.bringToFront();  // SDL画面の最前面に表示
-            overlayView.setZ(9999f);
-            Log("AutomationOverlay 追加完了");
-        } catch (Exception e) {
-            Log("AutomationOverlay 追加失敗: " + e.getMessage());
-        }
+        runOnUiThread(() -> {
+            try {
+                // SDL の SurfaceView の上にオーバーレイを配置
+                ViewGroup rootView = (ViewGroup) getWindow().getDecorView().getRootView();
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                overlayView = new AutomationOverlayView(this);
+                rootView.addView(overlayView, params);
+                Log("AutomationOverlay 追加完了");
+            } catch (Exception e) {
+                Log("AutomationOverlay 追加失敗: " + e.getMessage());
+            }
+        });
     }
+
+    // ---- Bluetooth パーミッション ----
 
     private void requestBluetoothPermissions() {
         String[] perms;
@@ -95,7 +105,9 @@ public class sysdvrActivity extends SDLActivity
             for (int r : results) {
                 if (r != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; }
             }
-            if (!allGranted) {
+            if (allGranted) {
+                Log("Bluetooth パーミッション許可済み");
+            } else {
                 runOnUiThread(() ->
                     Toast.makeText(this,
                         "Bluetooth パーミッションが必要です (Arduino 接続のため)",
@@ -104,6 +116,8 @@ public class sysdvrActivity extends SDLActivity
             }
         }
     }
+
+    // ---- パッケージ名チェック (元のまま) ----
 
     static boolean checkOnce = true;
     void CheckPackageName() {

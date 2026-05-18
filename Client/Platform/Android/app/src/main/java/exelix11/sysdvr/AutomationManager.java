@@ -81,15 +81,15 @@ public class AutomationManager {
         arduinoController = new ArduinoBluetoothController(ctx);
         arduinoController.setCallback(new ArduinoBluetoothController.ConnectionCallback() {
             @Override public void onConnected(String name) {
-                AutomationManager.this.notify("Arduino接続成功: " + name);
+                notify("Arduino接続成功: " + name);
                 if (statusListener != null) statusListener.onArduinoConnected(name);
             }
             @Override public void onDisconnected() {
-                AutomationManager.this.notify("Arduino切断");
+                notify("Arduino切断");
                 if (statusListener != null) statusListener.onArduinoDisconnected();
             }
             @Override public void onError(String message) {
-                AutomationManager.this.notify("Arduinoエラー: " + message);
+                notify("Arduinoエラー: " + message);
                 if (statusListener != null) statusListener.onError(message);
             }
         });
